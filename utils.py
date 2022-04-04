@@ -7,6 +7,7 @@ import logging
 import os
 import os.path
 import pathlib
+import re
 import shutil
 import subprocess
 import tarfile
@@ -48,11 +49,19 @@ def obter_data_atual():
     return datetime.now()
 
 
-def listar_arquivos_diretorio(caminho, extensao):
+def listar_nomes_arquivos_diretorio(caminho, extensao):
     arquivos = []
     os.chdir(caminho)
     for file in glob.glob(extensao):
         arquivos.append(file)
+    return arquivos
+
+
+def listar_path_arquivos_diretorio(caminho, extensao):
+    arquivos = []
+    os.chdir(caminho)
+    for file in glob.glob(extensao):
+        arquivos.append(os.path.join(caminho, file))
     return arquivos
 
 
@@ -80,6 +89,10 @@ def mover_arquivos(origem, destino):
 
 def mover_arquivo(nome_arquivo, destino):
     shutil.move(nome_arquivo, destino)
+
+
+def copiar_arquivo(nome_arquivo, destino):
+    shutil.copy(nome_arquivo, destino)
 
 
 def is_not_blank(s):
@@ -161,6 +174,26 @@ def comparar_certificado(cert, key):
         return False
     else:
         return True
+
+
+def criar_bundle(arquivo_crt, cadeias):
+    # Certificado principal
+    cert = x509.load_pem_x509_certificate(pathlib.Path(arquivo_crt).read_bytes())
+    with open(Path(cadeias), 'r') as f:
+        conteudo = f.read()
+        f.close()
+    certs = re.findall(r'(-----BEGIN .+?-----(?s).+?-----END .+?-----)', conteudo, flags=re.DOTALL | re.MULTILINE)
+    extensao_novo_arquivo = '.ca-bundle'
+    path_novo_arquivo = Path(arquivo_crt).parent.absolute()
+    nome_novo_arquivo = Path(arquivo_crt).stem
+    path_completo_novo_arquivo = os.path.join(path_novo_arquivo, nome_novo_arquivo + extensao_novo_arquivo)
+    with open(path_completo_novo_arquivo, "a+") as f:
+        data = cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
+        f.write(data)
+        for c in certs:
+            f.write(c + '\n')
+        f.close()
+    return path_completo_novo_arquivo
 
 
 def converter_json(entidade):

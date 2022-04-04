@@ -50,11 +50,8 @@ def ler_arquivo_conf_nginx(caminho_arquivo):
 
 
 def listar_arquivos_conf_nginx():
-    lista_caminho_arquivos_conf = []
-    nomes_arquivos = utils.listar_arquivos_diretorio(path_nginx_config_files, "*.conf")
-    for nome in nomes_arquivos:
-        lista_caminho_arquivos_conf.append(nome)
-    return lista_caminho_arquivos_conf
+    path_arquivos = utils.listar_path_arquivos_diretorio(path_nginx_config_files, "*.conf")
+    return path_arquivos
 
 
 def obter_informacoes_vhosts_nginx():
@@ -75,40 +72,41 @@ def obter_informacoes_vhosts_nginx():
                     numeric_string = "".join(numeric_filter)
                     port = numeric_string
                 else:
-                    port = ''
+                    port = None
                 if 'server_name' in dicionario:
                     server_name = dicionario['server_name']
                 else:
-                    server_name = ''
+                    server_name = None
                 if 'ssl_certificate' in dicionario:
                     ssl_certificate_file = dicionario['ssl_certificate']
                     certificado_dto = utils.ler_certificado_crt(ssl_certificate_file)
                 else:
-                    ssl_certificate_file = ''
+                    ssl_certificate_file = None
                 if 'ssl_certificate_key' in dicionario:
                     ssl_certificate_key_file = dicionario['ssl_certificate_key']
                 else:
-                    ssl_certificate_key_file = ''
+                    ssl_certificate_key_file = None
 
                 # Campos nao existem no Nginx
-                server_admin = ''
-                server_alias = ''
-                ssl_certificate_chain_file = ''
+                server_admin = None
+                server_alias = None
+                ssl_certificate_chain_file = None
                 if certificado_dto is not None:
-                    vhost = VhostDTO(info_config.__dict__, port, server_admin, server_name, server_alias,
+                    vhost = VhostDTO(info_config, port, server_admin, server_name, server_alias,
                                      ssl_certificate_file, ssl_certificate_key_file, ssl_certificate_chain_file,
-                                     certificado_dto.__dict__)
+                                     arquivo, certificado_dto.__dict__)
                 else:
-                    vhost = VhostDTO(info_config.__dict__, port, server_admin, server_name, server_alias,
-                                     ssl_certificate_file, ssl_certificate_key_file, ssl_certificate_chain_file)
+                    vhost = VhostDTO(info_config, port, server_admin, server_name, server_alias,
+                                     ssl_certificate_file, ssl_certificate_key_file,
+                                     ssl_certificate_chain_file, arquivo)
 
-                vhosts.append(vhost.__dict__)
+                vhosts.append(vhost)
 
         return vhosts
 
     else:
-        vhost = VhostDTO(info_config.__dict__)
-        vhosts.append(vhost.__dict__)
+        vhost = VhostDTO(info_config)
+        vhosts.append(vhost)
         return vhosts
 
 
