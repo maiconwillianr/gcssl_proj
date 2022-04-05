@@ -38,7 +38,7 @@ def configurar_paths(nome_sistema):
 def listar_vhosts_apache():
     lista_caminho_vhost = []
     proc = subprocess.check_output(['sudo', '/usr/sbin/apachectl', '-D', 'DUMP_VHOSTS'], encoding='UTF-8')
-    nomes_arquivos = utils.listar_arquivos_diretorio(path_apache_config_files, "*.conf")
+    nomes_arquivos = utils.listar_path_arquivos_diretorio(path_apache_config_files, "*.conf")
     for nome in nomes_arquivos:
         if nome in proc:
             lista_caminho_vhost.append(nome)
