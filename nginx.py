@@ -159,3 +159,20 @@ def obter_informacoes():
     else:
         servidor = ServidorDTO(nome, versao, info_config.__dict__)
     return servidor
+
+
+def reload_nginx():
+    # CentOS/RHEL/Fedora Linux
+    # resultado = subprocess.run(['sudo', 'systemctl', 'reload', 'httpd'], capture_output=True, text=True)
+    # Debian/Ubuntu Linux
+    resultado = subprocess.run(['sudo', 'systemctl', 'reload', 'nginx'],
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+    # Erro
+    if resultado.returncode:
+        logging.error(resultado.stderr)
+        logging.error("Exceção Capturada", exc_info=True)
+        info_config = InfoConfigDTO("Erro", resultado.stderr)
+    else:
+        return True
+
+    return False

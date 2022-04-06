@@ -163,31 +163,42 @@ def obter_md5_arquivo_crt(path_arquivo):
 
 
 def comparar_certificado(cert, key):
-    cert = x509.load_pem_x509_certificate(pathlib.Path(cert).read_bytes())
+    # Verifica se ha mais de um certificado
+    certificados_iguais = False
+    cert_pub_list = []
+    cert_slots_list = ler_cadeias_certificados_pem(cert)
+    for c in cert_slots_list:
+        cert = x509.load_pem_x509_certificate(bytes(c.encode()))
+        cert_pub_list.append(cert.public_key().public_bytes(serialization.Encoding.PEM,
+                                                            format=serialization.PublicFormat.SubjectPublicKeyInfo))
     key = load_pem_private_key(pathlib.Path(key).read_bytes(), password=None)
-    cert_pub = cert.public_key().public_bytes(serialization.Encoding.PEM,
-                                              format=serialization.PublicFormat.SubjectPublicKeyInfo)
     key_pub = key.public_key().public_bytes(serialization.Encoding.PEM,
                                             format=serialization.PublicFormat.SubjectPublicKeyInfo)
+    for cert_pub in cert_pub_list:
+        if cert_pub == key_pub:
+            certificados_iguais = True
 
-    if cert_pub != key_pub:
-        return False
-    else:
-        return True
+    return certificados_iguais
+
+
+def ler_cadeias_certificados_pem(cadeias):
+    certs = []
+    with open(Path(cadeias), 'r') as f:
+        conteudo = f.read()
+        f.close()
+    certs = re.findall(r'(-----BEGIN .+?-----(?s).+?-----END .+?-----)', conteudo, flags=re.DOTALL | re.MULTILINE)
+    return certs
 
 
 def criar_bundle(arquivo_crt, cadeias):
     # Certificado principal
     cert = x509.load_pem_x509_certificate(pathlib.Path(arquivo_crt).read_bytes())
-    with open(Path(cadeias), 'r') as f:
-        conteudo = f.read()
-        f.close()
-    certs = re.findall(r'(-----BEGIN .+?-----(?s).+?-----END .+?-----)', conteudo, flags=re.DOTALL | re.MULTILINE)
-    extensao_novo_arquivo = '.ca-bundle'
+    certs = ler_cadeias_certificados_pem(cadeias)
+    extensao_novo_arquivo = '.ca-bundle.pem'
     path_novo_arquivo = Path(arquivo_crt).parent.absolute()
     nome_novo_arquivo = Path(arquivo_crt).stem
     path_completo_novo_arquivo = os.path.join(path_novo_arquivo, nome_novo_arquivo + extensao_novo_arquivo)
-    with open(path_completo_novo_arquivo, "a+") as f:
+    with open(path_completo_novo_arquivo, "w") as f:
         data = cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
         f.write(data)
         for c in certs:
@@ -238,6 +249,16 @@ def extract(file_name: str, path_destination: str, password=None):
                     zipObj.extractall(pwd=bytes(password, 'utf-8'))
             else:
                 logging.error("Erro ao descompactar zip")
+
+
+def extrair_arquivos(pathNewCert: str, pasta_destino_temp: str):
+    # Extrai arquivo com os certificados
+    extract(pathNewCert, pasta_destino_temp)
+    list_arquivos = []
+    for root, dirs, files in os.walk(os.path.abspath(pasta_destino_temp)):
+        for file in files:
+            list_arquivos.append(os.path.join(root, file))
+    return list_arquivos
 
 
 # Cria pasta para o armazenamento de Logs
