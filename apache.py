@@ -67,10 +67,10 @@ def obter_informacoes_vhosts_apache():
     vhosts = []
     if info_config.status == 'OK':
         # Listar VHosts Apache
-        lista_vhosts = listar_vhosts_apache()
+        lista_arquivos_conf = listar_vhosts_apache()
         certificado_dto = None
-        for vhost in lista_vhosts:
-            dicionarios = ler_arquivo_conf_apache(vhost)
+        for arquivo in lista_arquivos_conf:
+            dicionarios = ler_arquivo_conf_apache(arquivo)
             for dicionario in dicionarios:
                 if 'VirtualHost' in dicionario:
                     port = dicionario['VirtualHost']
@@ -78,40 +78,40 @@ def obter_informacoes_vhosts_apache():
                     numeric_string = "".join(numeric_filter)
                     port = numeric_string
                 else:
-                    port = ''
+                    port = None
                 if 'ServerAdmin' in dicionario:
                     server_admin = dicionario['ServerAdmin']
                 else:
-                    server_admin = ''
+                    server_admin = None
                 if 'ServerName' in dicionario:
                     server_name = dicionario['ServerName']
                 else:
-                    server_name = ''
+                    server_name = None
                 if 'ServerAlias' in dicionario:
                     server_alias = dicionario['ServerAlias']
                 else:
-                    server_alias = ''
+                    server_alias = None
                 if 'SSLCertificateFile' in dicionario:
                     ssl_certificate_file = dicionario['SSLCertificateFile']
                     certificado_dto = utils.ler_certificado_crt(ssl_certificate_file)
                 else:
-                    ssl_certificate_file = ''
+                    ssl_certificate_file = None
                 if 'SSLCertificateKeyFile' in dicionario:
                     ssl_certificate_key_file = dicionario['SSLCertificateKeyFile']
                 else:
-                    ssl_certificate_key_file = ''
+                    ssl_certificate_key_file = None
                 if 'SSLCertificateChainFile' in dicionario:
                     ssl_certificate_chain_file = dicionario['SSLCertificateChainFile']
                 else:
-                    ssl_certificate_chain_file = ''
+                    ssl_certificate_chain_file = None
 
                 if certificado_dto is not None:
                     vhost = VhostDTO(info_config, port, server_admin, server_name, server_alias,
                                      ssl_certificate_file, ssl_certificate_key_file, ssl_certificate_chain_file,
-                                     certificado_dto.__dict__)
+                                     arquivo, certificado_dto.__dict__)
                 else:
                     vhost = VhostDTO(info_config, port, server_admin, server_name, server_alias,
-                                     ssl_certificate_file, ssl_certificate_key_file, ssl_certificate_chain_file)
+                                     ssl_certificate_file, ssl_certificate_key_file, ssl_certificate_chain_file, arquivo)
 
                 vhosts.append(vhost)
 
@@ -246,22 +246,3 @@ def listar_certificados_crt():
 
 data_hoje = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 configurar_paths(distro.name())
-
-# Certifado principal
-# cert = x509.load_pem_x509_certificate(
-#    pathlib.Path('/home/maiconribeiro/Downloads/_expresso.pr.gov.br/STAR_expresso_pr_gov_br.crt').read_bytes())
-
-# with open(
-#        pathlib.Path('/home/maiconribeiro/Downloads/_expresso.pr.gov.br/STAR_expresso_pr_gov_br.ca-bundle'),
-#        'r') as f:
-#    conteudo = f.read()
-#    f.close()
-
-# certs = re.findall(r'(-----BEGIN .+?-----(?s).+?-----END .+?-----)', conteudo, flags=re.DOTALL | re.MULTILINE)
-
-# with open("/home/maiconribeiro/Downloads/cert.crt", "a+") as f:
-#    data = cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
-#    f.write(data)
-#    for c in certs:
-#        f.write(c + '\n')
-#    f.close()

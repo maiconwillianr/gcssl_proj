@@ -192,6 +192,7 @@ def ler_cadeias_certificados_pem(cadeias):
 
 def criar_bundle(arquivo_crt, cadeias):
     # Certificado principal
+    txt = Path(arquivo_crt).read_text()
     cert = x509.load_pem_x509_certificate(pathlib.Path(arquivo_crt).read_bytes())
     certs = ler_cadeias_certificados_pem(cadeias)
     extensao_novo_arquivo = '.ca-bundle.pem'
@@ -200,7 +201,7 @@ def criar_bundle(arquivo_crt, cadeias):
     path_completo_novo_arquivo = os.path.join(path_novo_arquivo, nome_novo_arquivo + extensao_novo_arquivo)
     with open(path_completo_novo_arquivo, "w") as f:
         data = cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
-        f.write(data)
+        f.write(data + '\n')
         for c in certs:
             f.write(c + '\n')
         f.close()

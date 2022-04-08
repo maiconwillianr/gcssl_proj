@@ -131,8 +131,8 @@ def listar_certificados():
     certificados = []
     vhosts = obter_informacoes_vhosts_nginx()
     for vhost in vhosts:
-        if 'certificado' in vhost:
-            certificados.append(vhost['certificado'])
+        if hasattr(vhost, 'certificado'):
+            certificados.append(vhost.get_certificado())
     return certificados
 
 

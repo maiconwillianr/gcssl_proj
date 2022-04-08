@@ -128,12 +128,14 @@ def atualizar_certificado(commonName: str, pathNewCert: str):
                     cert = vhost.get_certificado()
                     # Se o commonName estiver em algum arquivo de configuracao atualiza o certificado
                     if cert['nomeCompleto'] == commonName:
+                        #Comparar md5 do certificado
                         atualizar_certificado_nginx(vhost, pasta_destino_temp, path_novo_arquivo_pem,
                                                     path_novo_arquivo_crt, path_novo_arquivo_key)
                         # Verifica se a configuração possui erros
                         info_config = nginx.verificar_configuracao_nginx()
                         if info_config.get_status() == 'Erro':
                             utils.set_log_info("Nginx com erro de configuração")
+                            # Voltar certificados antigos
                         else:
                             nginx.reload_nginx()
                             utils.set_log_info("Certificados atualizados com Sucesso")
@@ -147,30 +149,31 @@ def atualizar_certificado(commonName: str, pathNewCert: str):
                     cert = vhost.get_certificado()
                     if cert['nomeCompleto'] == commonName:
                         path_completo_crt = vhost.get_ssl_certificate_file()
+                        certificado_atual = utils.ler_certificado_crt(vhost.get_ssl_certificate_file())
                         certificado_anterior = utils.ler_certificado_crt(path_completo_crt)
                         atualizar_certificado_apache(vhost, pasta_destino_temp, path_novo_arquivo_crt,
                                                      path_novo_arquivo_key)
                         # Verifica se a configuração possui erros
-                        retorno_configuracao = apache.verificar_configuracao_apache()
-                        if retorno_configuracao:
-                            utils.set_log_info("Certificado atualizado com Sucesso")
-                        else:
+                        info_config = apache.verificar_configuracao_apache()
+                        if info_config.get_status() == 'Erro':
                             utils.set_log_info("Apache com erro de configuração")
-                        apache.reload_apache()
-                        utils.set_log_info("Certificados atualizados com Sucesso")
+                            # Voltar certificados antigos
+                        else:
+                            apache.reload_apache()
+                            utils.set_log_info("Certificados atualizados com Sucesso")
 
-                        # Cria um envio
-                        file = open(utils.obter_log())
-                        log = file.read()
-                        file.close()
 
-                        certificado_atual = utils.ler_certificado_crt(path_completo_crt)
 
-                        envio_atualizacao.append(AtualizacaoDTO(ambiente.obter_host_name(), utils.obter_token_local(),
-                                                                ambiente.get_ip(), certificado_anterior.__dict__,
-                                                                certificado_atual.__dict__,
-                                                                datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-                                                                datetime.now().strftime("%d/%m/%Y %H:%M:%S"), log))
+        # Cria um envio
+        file = open(utils.obter_log())
+        log = file.read()
+        file.close()
+
+        envio_atualizacao.append(AtualizacaoDTO(ambiente.obter_host_name(), utils.obter_token_local(),
+                                                ambiente.get_ip(), certificado_anterior.__dict__,
+                                                certificado_atual.__dict__,
+                                                datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+                                                datetime.now().strftime("%d/%m/%Y %H:%M:%S"), log))
 
         # Remove a pasta temporaria de download
         shutil.rmtree(pasta_destino_temp)
