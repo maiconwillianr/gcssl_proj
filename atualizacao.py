@@ -45,7 +45,7 @@ def atualizar_certificado_nginx(vhost: VhostDTO, pasta_destino_temp: str, path_n
     os.rename(caminho_temp_novo_key, str(Path(pasta_destino_temp, nome_key_original)))
     caminho_temp_novo_key = str(Path(pasta_destino_temp, nome_key_original))
     # Verifica se os arquivos baixados .crt e .key correspondem
-    compativeis = utils.comparar_certificado(path_novo_arquivo_crt_bundle, caminho_temp_novo_key)
+    compativeis = utils.comparar_crt_key(path_novo_arquivo_crt_bundle, caminho_temp_novo_key)
     if compativeis:
         utils.set_log_info("Certificados compativeis")
         # Cria backup local dos certificados vencidos
@@ -77,7 +77,6 @@ def atualizar_certificado_apache(vhost: VhostDTO, pasta_destino_temp: str, path_
     nome_crt_original = os.path.basename(vhost.get_ssl_certificate_file())
     os.rename(caminho_temp_novo_crt, str(Path(pasta_destino_temp, nome_crt_original)))
     caminho_temp_novo_crt = str(Path(pasta_destino_temp, nome_crt_original))
-    # verificar se o arquivo cert foi baixado e a validade (precisa implementar)
     # Obtem o caminho para o novo arquivo .key
     caminho_temp_novo_key = os.path.join(pasta_destino_temp, path_novo_arquivo_key)
     # Renomeia o arquivo recebido via ssh
@@ -85,7 +84,7 @@ def atualizar_certificado_apache(vhost: VhostDTO, pasta_destino_temp: str, path_
     os.rename(caminho_temp_novo_key, str(Path(pasta_destino_temp, nome_key_original)))
     caminho_temp_novo_key = str(Path(pasta_destino_temp, nome_key_original))
     # Verifica se os arquivos baixados .crt e .key correspondem
-    compativeis = utils.comparar_certificado(caminho_temp_novo_crt, caminho_temp_novo_key)
+    compativeis = utils.comparar_crt_key(caminho_temp_novo_crt, caminho_temp_novo_key)
     if compativeis:
         utils.set_log_info("Certificados compativeis")
         # Cria backup local dos certificados vencidos
@@ -126,19 +125,24 @@ def atualizar_certificado(commonName: str, pathNewCert: str):
             for vhost in vhosts:
                 if vhost.get_info_config().get_status() != 'Erro':
                     cert = vhost.get_certificado()
-                    # Se o commonName estiver em algum arquivo de configuracao atualiza o certificado
+                    # Se o commonName estiver em algum arquivo de configuracao
                     if cert['nomeCompleto'] == commonName:
-                        #Comparar md5 do certificado
-                        atualizar_certificado_nginx(vhost, pasta_destino_temp, path_novo_arquivo_pem,
-                                                    path_novo_arquivo_crt, path_novo_arquivo_key)
-                        # Verifica se a configuração possui erros
-                        info_config = nginx.verificar_configuracao_nginx()
-                        if info_config.get_status() == 'Erro':
-                            utils.set_log_info("Nginx com erro de configuração")
-                            # Voltar certificados antigos
+                        # Comparar as chaves publicas dos certificados e verificar se os certificados sao os mesmos
+                        certificados_iguais = utils.comparar_certificado(path_novo_arquivo_crt,
+                                                                         vhost.get_ssl_certificate_file())
+                        if certificados_iguais:
+                            utils.set_log_info("Certificados ja estão configurados")
                         else:
-                            nginx.reload_nginx()
-                            utils.set_log_info("Certificados atualizados com Sucesso")
+                            atualizar_certificado_nginx(vhost, pasta_destino_temp, path_novo_arquivo_pem,
+                                                        path_novo_arquivo_crt, path_novo_arquivo_key)
+                            # Verifica se a configuração possui erros
+                            info_config = nginx.verificar_configuracao_nginx()
+                            if info_config.get_status() == 'Erro':
+                                utils.set_log_info("Nginx com erro de configuração")
+                                # Voltar certificados antigos
+                            else:
+                                nginx.reload_nginx()
+                                utils.set_log_info("Certificados atualizados com Sucesso")
 
         # Verifica se existe apache instalado
         if os.path.exists('/etc/apache2'):
@@ -161,8 +165,6 @@ def atualizar_certificado(commonName: str, pathNewCert: str):
                         else:
                             apache.reload_apache()
                             utils.set_log_info("Certificados atualizados com Sucesso")
-
-
 
         # Cria um envio
         file = open(utils.obter_log())

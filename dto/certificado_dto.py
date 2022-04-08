@@ -16,3 +16,6 @@ class CertificadoDTO:
             self.dataVencimento = data_validade
         if vencido is not None:
             self.vencido = vencido
+
+    def get_md5(self):
+        return self.md5

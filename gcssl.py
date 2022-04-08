@@ -54,4 +54,6 @@ def update(common_name: str, path_new_cert: str):
 
 
 if __name__ == "__main__":
-    app()
+    # app()
+    atualizacao_info = atualizar_certificado('teste-certificados.celepar.parana', '/home/maiconribeiro/Documents'
+                                                                                  '/teste-certificados.celepar.parana.zip')

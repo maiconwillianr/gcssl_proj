@@ -162,7 +162,28 @@ def obter_md5_arquivo_crt(path_arquivo):
     return md5_hash
 
 
-def comparar_certificado(cert, key):
+def comparar_certificado(path_cert1: str, path_cert2: str):
+    # Compara atraves da chave public se os certificados sao iguais
+    certificados_iguais = False
+    cert_pub_list = []
+    cert_slots_list = ler_cadeias_certificados_pem(path_cert1)
+    for c in cert_slots_list:
+        cert1 = x509.load_pem_x509_certificate(bytes(c.encode()))
+        cert_pub_list.append(cert1.public_key().public_bytes(serialization.Encoding.PEM,
+                                                             format=serialization.PublicFormat.SubjectPublicKeyInfo))
+
+    cert2 = x509.load_pem_x509_certificate(pathlib.Path(path_cert2).read_bytes())
+    cert2_md5 = cert2.public_key().public_bytes(serialization.Encoding.PEM,
+                                                format=serialization.PublicFormat.SubjectPublicKeyInfo)
+
+    for cert1_pub in cert_pub_list:
+        if cert1_pub == cert2_md5:
+            certificados_iguais = True
+
+    return certificados_iguais
+
+
+def comparar_crt_key(cert, key):
     # Verifica se ha mais de um certificado
     certificados_iguais = False
     cert_pub_list = []
@@ -192,7 +213,6 @@ def ler_cadeias_certificados_pem(cadeias):
 
 def criar_bundle(arquivo_crt, cadeias):
     # Certificado principal
-    txt = Path(arquivo_crt).read_text()
     cert = x509.load_pem_x509_certificate(pathlib.Path(arquivo_crt).read_bytes())
     certs = ler_cadeias_certificados_pem(cadeias)
     extensao_novo_arquivo = '.ca-bundle.pem'
