@@ -99,8 +99,9 @@ def atualizar_certificado(commonName: str, pathNewCert: str):
 
     try:
 
+        certificado_anterior = None
+        certificado_atual = None
         envio_atualizacao = []
-
         # Cria pasta temporaria para o download dos novos certificados
         pasta_destino_temp = utils.criar_pasta("temp_" + datetime.now().strftime("%d-%m-%Y"), utils.cwd)
         utils.set_log_info("Criada pasta temporaria: " + str(pasta_destino_temp.absolute()))
@@ -152,19 +153,26 @@ def atualizar_certificado(commonName: str, pathNewCert: str):
                 if vhost.get_info_config().get_status() != 'Erro':
                     cert = vhost.get_certificado()
                     if cert['nomeCompleto'] == commonName:
-                        path_completo_crt = vhost.get_ssl_certificate_file()
-                        certificado_atual = utils.ler_certificado_crt(vhost.get_ssl_certificate_file())
-                        certificado_anterior = utils.ler_certificado_crt(path_completo_crt)
-                        atualizar_certificado_apache(vhost, pasta_destino_temp, path_novo_arquivo_crt,
-                                                     path_novo_arquivo_key)
-                        # Verifica se a configuração possui erros
-                        info_config = apache.verificar_configuracao_apache()
-                        if info_config.get_status() == 'Erro':
-                            utils.set_log_info("Apache com erro de configuração")
-                            # Voltar certificados antigos
+                        # Comparar as chaves publicas dos certificados e verificar se os certificados sao os mesmos
+                        certificados_iguais = utils.comparar_certificado(path_novo_arquivo_crt,
+                                                                         vhost.get_ssl_certificate_file())
+                        if certificados_iguais:
+                            utils.set_log_info("Certificados ja estão configurados")
                         else:
-                            apache.reload_apache()
-                            utils.set_log_info("Certificados atualizados com Sucesso")
+                            path_completo_crt = vhost.get_ssl_certificate_file()
+                            certificado_atual = utils.ler_certificado_crt(vhost.get_ssl_certificate_file())
+                            certificado_anterior = utils.ler_certificado_crt(path_completo_crt)
+                            #Passar as cadeias
+                            atualizar_certificado_apache(vhost, pasta_destino_temp, path_novo_arquivo_crt,
+                                                         path_novo_arquivo_key)
+                            # Verifica se a configuração possui erros
+                            info_config = apache.verificar_configuracao_apache()
+                            if info_config.get_status() == 'Erro':
+                                utils.set_log_info("Apache com erro de configuração")
+                                # Voltar certificados antigos
+                            else:
+                                apache.reload_apache()
+                                utils.set_log_info("Certificados atualizados com Sucesso")
 
         # Cria um envio
         file = open(utils.obter_log())
@@ -172,16 +180,15 @@ def atualizar_certificado(commonName: str, pathNewCert: str):
         file.close()
 
         envio_atualizacao.append(AtualizacaoDTO(ambiente.obter_host_name(), utils.obter_token_local(),
-                                                ambiente.get_ip(), certificado_anterior.__dict__,
-                                                certificado_atual.__dict__,
-                                                datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-                                                datetime.now().strftime("%d/%m/%Y %H:%M:%S"), log))
+                                                ambiente.get_ip(), datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+                                                datetime.now().strftime("%d/%m/%Y %H:%M:%S"), log,
+                                                certificado_anterior, certificado_atual).__dict__)
 
         # Remove a pasta temporaria de download
         shutil.rmtree(pasta_destino_temp)
 
         # Converte para JSON
-        parsed_json = utils.converter_json(envio_atualizacao.__dict__)
+        parsed_json = utils.converter_json(envio_atualizacao)
         return parsed_json
 
     except Exception as err:

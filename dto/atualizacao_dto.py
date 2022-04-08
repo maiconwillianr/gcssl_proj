@@ -1,6 +1,7 @@
 class AtualizacaoDTO:
 
-    def __init__(self, host, token, ip, certificadoAnterior, certificadoAtual, data_atualizacao, data_envio, log_param):
+    def __init__(self, host, token, ip, data_atualizacao, data_envio, log_param,
+                 certificadoAnterior=None, certificadoAtual=None):
         self.host = host
         self.token = token
         self.ip = ip
