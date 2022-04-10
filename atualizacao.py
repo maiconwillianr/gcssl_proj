@@ -10,6 +10,7 @@ import apache
 import nginx
 import utils
 from dto.atualizacao_dto import AtualizacaoDTO
+from dto.item_atualizacao_dto import ItemAtualizacaoDTO
 from dto.vhost_dto import VhostDTO
 
 
@@ -102,9 +103,10 @@ def atualizar_certificado(commonName: str, pathNewCert: str):
         certificado_anterior = None
         certificado_atual = None
         envio_atualizacao = []
+        itens_atualizados = []
         # Cria pasta temporaria para o download dos novos certificados
         pasta_destino_temp = utils.criar_pasta("temp_" + datetime.now().strftime("%d-%m-%Y"), utils.cwd)
-        utils.set_log_info("Criada pasta temporaria: " + str(pasta_destino_temp.absolute()))
+        utils.set_log_info("Criada pasta temporaria em: " + str(pasta_destino_temp.absolute()))
         # Extrai arquivo com os certificados em uma pasta temporaria
         list_arquivos = utils.extrair_arquivos(pathNewCert, pasta_destino_temp)
         # Le os arquivos por extensao
@@ -132,8 +134,13 @@ def atualizar_certificado(commonName: str, pathNewCert: str):
                         certificados_iguais = utils.comparar_certificado(path_novo_arquivo_crt,
                                                                          vhost.get_ssl_certificate_file())
                         if certificados_iguais:
-                            utils.set_log_info("Certificados ja estão configurados")
+                            utils.set_log_info("Certificados ja estão configurados no servidor Nginx")
                         else:
+                            path_completo_crt = vhost.get_ssl_certificate_file()
+                            certificado_atual = utils.ler_certificado_crt(vhost.get_ssl_certificate_file())
+                            certificado_anterior = utils.ler_certificado_crt(path_completo_crt)
+                            itens_atualizados.append(ItemAtualizacaoDTO(certificado_anterior, certificado_atual))
+                            # Funcao para atualizar o certificado
                             atualizar_certificado_nginx(vhost, pasta_destino_temp, path_novo_arquivo_pem,
                                                         path_novo_arquivo_crt, path_novo_arquivo_key)
                             # Verifica se a configuração possui erros
@@ -157,12 +164,13 @@ def atualizar_certificado(commonName: str, pathNewCert: str):
                         certificados_iguais = utils.comparar_certificado(path_novo_arquivo_crt,
                                                                          vhost.get_ssl_certificate_file())
                         if certificados_iguais:
-                            utils.set_log_info("Certificados ja estão configurados")
+                            utils.set_log_info("Certificados ja estão configurados no servidor Apache")
                         else:
                             path_completo_crt = vhost.get_ssl_certificate_file()
                             certificado_atual = utils.ler_certificado_crt(vhost.get_ssl_certificate_file())
                             certificado_anterior = utils.ler_certificado_crt(path_completo_crt)
-                            #Passar as cadeias
+                            itens_atualizados.append(ItemAtualizacaoDTO(certificado_anterior, certificado_atual))
+                            # Passar as cadeias
                             atualizar_certificado_apache(vhost, pasta_destino_temp, path_novo_arquivo_crt,
                                                          path_novo_arquivo_key)
                             # Verifica se a configuração possui erros
@@ -182,7 +190,7 @@ def atualizar_certificado(commonName: str, pathNewCert: str):
         envio_atualizacao.append(AtualizacaoDTO(ambiente.obter_host_name(), utils.obter_token_local(),
                                                 ambiente.get_ip(), datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
                                                 datetime.now().strftime("%d/%m/%Y %H:%M:%S"), log,
-                                                certificado_anterior, certificado_atual).__dict__)
+                                                itens_atualizados).__dict__)
 
         # Remove a pasta temporaria de download
         shutil.rmtree(pasta_destino_temp)
@@ -192,5 +200,5 @@ def atualizar_certificado(commonName: str, pathNewCert: str):
         return parsed_json
 
     except Exception as err:
-        utils.set_log_error("Exceção Capturada", exc_info=True)
+        utils.set_log_error("Exceção Capturada")
         utils.set_log_error(err)
