@@ -99,10 +99,6 @@ def atualizar_certificado(commonName: str, pathNewCert: str):
     utils.set_log_info("Executando script atualizacao.py")
 
     try:
-
-        certificado_anterior = None
-        certificado_atual = None
-        envio_atualizacao = []
         itens_atualizados = []
         # Cria pasta temporaria para o download dos novos certificados
         pasta_destino_temp = utils.criar_pasta("temp_" + datetime.now().strftime("%d-%m-%Y"), utils.cwd)
@@ -187,16 +183,15 @@ def atualizar_certificado(commonName: str, pathNewCert: str):
         log = file.read()
         file.close()
 
-        envio_atualizacao.append(AtualizacaoDTO(ambiente.obter_host_name(), utils.obter_token_local(),
-                                                ambiente.get_ip(), datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-                                                datetime.now().strftime("%d/%m/%Y %H:%M:%S"), log,
-                                                itens_atualizados).__dict__)
-
         # Remove a pasta temporaria de download
         shutil.rmtree(pasta_destino_temp)
 
         # Converte para JSON
-        parsed_json = utils.converter_json(envio_atualizacao)
+        parsed_json = utils.converter_json(AtualizacaoDTO(ambiente.obter_host_name(), utils.obter_token_local(),
+                                                          ambiente.get_ip(),
+                                                          datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+                                                          datetime.now().strftime("%d/%m/%Y %H:%M:%S"), log,
+                                                          itens_atualizados).__dict__)
         return parsed_json
 
     except Exception as err:
