@@ -267,7 +267,11 @@ def extract(file_name: str, path_destination: str, password=None):
             if 'encrypted' in str(e):
                 # zip com senha
                 with ZipFile(file_name, 'r') as zipObj:
-                    zipObj.extractall(pwd=bytes(password, 'utf-8'))
+                    if password is None:
+                        logging.error("Erro ao descompactar zip arquivo encriptado")
+                    else:
+                        zipObj.extractall(pwd=bytes(password, 'utf-8'))
+
             else:
                 logging.error("Erro ao descompactar zip")
 

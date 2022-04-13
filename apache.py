@@ -7,7 +7,6 @@ import subprocess
 from datetime import datetime
 
 import distro
-
 import utils
 from dto.info_config_dto import InfoConfigDTO
 from dto.servidor_dto import ServidorDTO
@@ -15,10 +14,6 @@ from dto.vhost_dto import VhostDTO
 
 path_apache_config_files = ''
 path_certificados = ''
-
-
-def set_log_info(log_info):
-    logging.info(log_info)
 
 
 def configurar_paths(nome_sistema):
@@ -111,7 +106,8 @@ def obter_informacoes_vhosts_apache():
                                      arquivo, certificado_dto.__dict__)
                 else:
                     vhost = VhostDTO(info_config, port, server_admin, server_name, server_alias,
-                                     ssl_certificate_file, ssl_certificate_key_file, ssl_certificate_chain_file, arquivo)
+                                     ssl_certificate_file, ssl_certificate_key_file, ssl_certificate_chain_file,
+                                     arquivo)
 
                 vhosts.append(vhost)
 
@@ -143,7 +139,7 @@ def obter_informacoes():
             stripped2 = stripped1.split('/', 1)
             nome = stripped2[0].replace(" ", "")
             versao = stripped2[1]
-    set_log_info("Servidor: " + nome + " Versao: " + versao)
+    utils.set_log_info("Servidor: " + nome + " Versao: " + versao)
     # Verifica a configuração do Apache
     info_config = verificar_configuracao_apache()
     if info_config.status == 'OK':
@@ -218,23 +214,24 @@ def atualizar_arquivos_apache(caminho_arquivo_conf, nome_arquivo_crt, nome_arqui
     pasta_temp_config_apache = utils.criar_pasta(datetime.now().strftime("%d-%m-%Y"), path_apache_config_files)
     # Copia o arquivo de configuração VirtualHosts para uma pasta de backup
     shutil.copy2(caminho_arquivo_conf, pasta_temp_config_apache)
-    set_log_info("Criado backup local do arquivo " + caminho_arquivo_conf + " em " + str(pasta_temp_config_apache))
+    utils.set_log_info(
+        "Criado backup local do arquivo " + caminho_arquivo_conf + " em " + str(pasta_temp_config_apache))
     # Altera o arquivo de configuração VirtualHosts com o caminho dos novos certificados
     utils.editar_arquivo_conf(caminho_arquivo_conf, "SSLCertificateFile", nome_arquivo_crt)
     utils.editar_arquivo_conf(caminho_arquivo_conf, "SSLCertificateKeyFile", nome_arquivo_key)
-    set_log_info("Arquivo " + caminho_arquivo_conf + " alterado")
+    utils.set_log_info("Arquivo " + caminho_arquivo_conf + " alterado")
 
 
 def listar_certificados_crt():
-    set_log_info("Buscando Certificados em: " + path_certificados)
+    utils.set_log_info("Buscando Certificados em: " + path_certificados)
 
     lista_certificados = []
-    for file in utils.listar_arquivos_diretorio(path_certificados, "*.crt"):
+    for file in utils.listar_path_arquivos_diretorio(path_certificados, "*.crt"):
         cert_file = os.path.join(path_certificados, file)
         certificado_dto = utils.ler_certificado_crt(cert_file)
-        set_log_info("Common Name: " + certificado_dto.nomeCompleto + " Data Emissão: " +
-                     certificado_dto.dataEmissao + " Data Vencimento: " +
-                     certificado_dto.dataVencimento)
+        utils.set_log_info("Common Name: " + certificado_dto.nomeCompleto + " Data Emissão: " +
+                           certificado_dto.dataEmissao + " Data Vencimento: " +
+                           certificado_dto.dataVencimento)
 
         lista_certificados.append(certificado_dto.__dict__)
 

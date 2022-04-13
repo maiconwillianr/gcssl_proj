@@ -10,10 +10,6 @@ from dto.vhost_dto import VhostDTO
 path_nginx_config_files = "/etc/nginx"
 
 
-def set_log_info(log_info):
-    logging.info(log_info)
-
-
 # ^(?!\s*#).*?$ - tira linhas com comentarios
 def ler_arquivo_conf_nginx(caminho_arquivo):
     dicionarios = []
@@ -45,6 +41,9 @@ def ler_arquivo_conf_nginx(caminho_arquivo):
                             if "ssl_certificate_key" in linha:
                                 dicionario["ssl_certificate_key"] = linha[1].replace(";", "")
                         dicionarios.append(dicionario)
+
+        f.flush()
+        f.close()
 
     return dicionarios
 
@@ -151,7 +150,7 @@ def obter_informacoes():
         stripped = linhas[2].split('/', 2)
         nome = stripped[0]
         versao = stripped[1]
-    set_log_info("Servidor: " + nome + " Versao: " + versao)
+    utils.set_log_info("Servidor: " + nome + " Versao: " + versao)
     # Verifica a configuração do nginx
     info_config = verificar_configuracao_nginx()
     if info_config.status == 'OK':

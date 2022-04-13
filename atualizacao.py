@@ -1,7 +1,6 @@
 # -*- Coding: UTF-8 -*-
 # coding: utf-8
 import os
-import shutil
 from datetime import datetime
 from pathlib import Path
 
@@ -14,14 +13,15 @@ from dto.item_atualizacao_dto import ItemAtualizacaoDTO
 from dto.vhost_dto import VhostDTO
 
 
-def criar_backup(path_completo_crt: str, path_completo_key: str):
+def criar_backup(path_completo_crt: str, path_completo_key: str, server: str):
     # Cria backup local dos certificados vencidos
     dt = datetime.now().strftime("%d-%m-%Y %H:%M:%S").split()
     pasta_backup_local = utils.criar_pasta(dt[1], utils.criar_pasta("backup_" + dt[0], utils.cwd))
+    pasta_backup_local_server = utils.criar_pasta(server, pasta_backup_local)
     # Move os certificados para o backup
-    utils.mover_arquivo(path_completo_crt, pasta_backup_local)
-    utils.mover_arquivo(path_completo_key, pasta_backup_local)
-    utils.set_log_info("Criado backup local dos certificados antigos em " + str(pasta_backup_local))
+    utils.mover_arquivo(path_completo_crt, pasta_backup_local_server)
+    utils.mover_arquivo(path_completo_key, pasta_backup_local_server)
+    utils.set_log_info("Criado backup local dos certificados antigos em " + str(pasta_backup_local_server))
 
 
 def atualizar_certificado_nginx(vhost: VhostDTO, pasta_destino_temp: str, path_novo_arquivo_pem: str,
@@ -35,10 +35,12 @@ def atualizar_certificado_nginx(vhost: VhostDTO, pasta_destino_temp: str, path_n
     path_key_index = path_key.rindex("/")
     path_key = path_key[:path_key_index]
     # Prepara bundle para instalacao no nginx
+    path_novo_arquivo_crt_bundle = ""
+    nome_novo_arquivo_crt_bundle = ""
     if path_novo_arquivo_pem:
         path_novo_arquivo_crt_bundle = utils.criar_bundle(path_novo_arquivo_crt, path_novo_arquivo_pem)
         nome_novo_arquivo_crt_bundle = os.path.basename(path_novo_arquivo_crt_bundle)
-    # verificar se o arquivo cert foi baixado e a validade (precisa implementar)
+    # Verificar se o arquivo cert foi baixado e a validade (precisa implementar)
     # Obtem o caminho para o novo arquivo .key
     caminho_temp_novo_key = os.path.join(pasta_destino_temp, path_novo_arquivo_key)
     # Renomeia o arquivo key recebido via ssh
@@ -50,7 +52,7 @@ def atualizar_certificado_nginx(vhost: VhostDTO, pasta_destino_temp: str, path_n
     if compativeis:
         utils.set_log_info("Certificados compativeis")
         # Cria backup local dos certificados vencidos
-        criar_backup(path_completo_crt, path_completo_key)
+        criar_backup(path_completo_crt, path_completo_key, "nginx")
         # Move os novos certificados da pasta temporaria para a pasta de certificados do apache
         utils.copiar_arquivo(path_novo_arquivo_crt_bundle, path_crt)
         utils.copiar_arquivo(caminho_temp_novo_key, path_key)
@@ -87,9 +89,9 @@ def atualizar_certificado_apache(vhost: VhostDTO, pasta_destino_temp: str, path_
     # Verifica se os arquivos baixados .crt e .key correspondem
     compativeis = utils.comparar_crt_key(caminho_temp_novo_crt, caminho_temp_novo_key)
     if compativeis:
-        utils.set_log_info("Certificados compativeis")
+        utils.set_log_info("Certificados compativeis servidor apache")
         # Cria backup local dos certificados vencidos
-        criar_backup(path_completo_crt, path_completo_key)
+        criar_backup(path_completo_crt, path_completo_key, "apache2")
         # Move os novos certificados da pasta temporaria para a pasta de certificados do apache
         utils.mover_arquivo(caminho_temp_novo_crt, path_crt)
         utils.mover_arquivo(caminho_temp_novo_key, path_key)
@@ -107,6 +109,8 @@ def atualizar_certificado(commonName: str, pathNewCert: str):
         list_arquivos = utils.extrair_arquivos(pathNewCert, pasta_destino_temp)
         # Le os arquivos por extensao
         path_novo_arquivo_pem = ""
+        path_novo_arquivo_crt = ""
+        path_novo_arquivo_key = ""
         for arquivo in list_arquivos:
             # Caso o zip contenha a cadeia de certificados em um arquivo separado
             if Path(arquivo).suffix == '.pem':
@@ -135,7 +139,8 @@ def atualizar_certificado(commonName: str, pathNewCert: str):
                             path_completo_crt = vhost.get_ssl_certificate_file()
                             certificado_atual = utils.ler_certificado_crt(vhost.get_ssl_certificate_file())
                             certificado_anterior = utils.ler_certificado_crt(path_completo_crt)
-                            itens_atualizados.append(ItemAtualizacaoDTO(certificado_anterior, certificado_atual))
+                            itens_atualizados.append(
+                                ItemAtualizacaoDTO(certificado_anterior.__dict__, certificado_atual.__dict__).__dict__)
                             # Funcao para atualizar o certificado
                             atualizar_certificado_nginx(vhost, pasta_destino_temp, path_novo_arquivo_pem,
                                                         path_novo_arquivo_crt, path_novo_arquivo_key)
@@ -165,7 +170,8 @@ def atualizar_certificado(commonName: str, pathNewCert: str):
                             path_completo_crt = vhost.get_ssl_certificate_file()
                             certificado_atual = utils.ler_certificado_crt(vhost.get_ssl_certificate_file())
                             certificado_anterior = utils.ler_certificado_crt(path_completo_crt)
-                            itens_atualizados.append(ItemAtualizacaoDTO(certificado_anterior, certificado_atual))
+                            itens_atualizados.append(
+                                ItemAtualizacaoDTO(certificado_anterior.__dict__, certificado_atual.__dict__).__dict__)
                             # Passar as cadeias
                             atualizar_certificado_apache(vhost, pasta_destino_temp, path_novo_arquivo_crt,
                                                          path_novo_arquivo_key)
@@ -184,7 +190,7 @@ def atualizar_certificado(commonName: str, pathNewCert: str):
         file.close()
 
         # Remove a pasta temporaria de download
-        shutil.rmtree(pasta_destino_temp)
+        # shutil.rmtree(pasta_destino_temp)
 
         # Converte para JSON
         parsed_json = utils.converter_json(AtualizacaoDTO(ambiente.obter_host_name(), utils.obter_token_local(),
