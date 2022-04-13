@@ -1,6 +1,7 @@
 # -*- Coding: UTF-8 -*-
 # coding: utf-8
 import os
+import shutil
 from datetime import datetime
 from pathlib import Path
 
@@ -107,6 +108,7 @@ def atualizar_certificado(commonName: str, pathNewCert: str):
         utils.set_log_info("Criada pasta temporaria em: " + str(pasta_destino_temp.absolute()))
         # Extrai arquivo com os certificados em uma pasta temporaria
         list_arquivos = utils.extrair_arquivos(pathNewCert, pasta_destino_temp)
+        utils.set_log_info("Arquivos extraidos")
         # Le os arquivos por extensao
         path_novo_arquivo_pem = ""
         path_novo_arquivo_crt = ""
@@ -190,7 +192,7 @@ def atualizar_certificado(commonName: str, pathNewCert: str):
         file.close()
 
         # Remove a pasta temporaria de download
-        # shutil.rmtree(pasta_destino_temp)
+        shutil.rmtree(pasta_destino_temp)
 
         # Converte para JSON
         parsed_json = utils.converter_json(AtualizacaoDTO(ambiente.obter_host_name(), utils.obter_token_local(),

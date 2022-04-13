@@ -10,6 +10,7 @@ import pathlib
 import re
 import shutil
 import subprocess
+import sys
 import tarfile
 from datetime import datetime
 from pathlib import Path
@@ -92,6 +93,7 @@ def mover_arquivo(nome_arquivo, destino):
 
 
 def copiar_arquivo(nome_arquivo, destino):
+    set_log_info("Arquivo copiado de " + nome_arquivo + " para " + destino)
     shutil.copy(nome_arquivo, destino)
 
 
@@ -139,18 +141,19 @@ def ler_arquivo_conf(caminho_arquivo):
 
 
 def editar_arquivo_conf(caminho_arquivo, chave, valor):
+    set_log_info("Editando arquivo de configuração " + caminho_arquivo)
     dicionario = ler_arquivo_conf(caminho_arquivo)
     try:
-        arquivo_entrada = open(caminho_arquivo, "rt")
-        data = arquivo_entrada.read()
-        data = data.replace(dicionario[chave], valor)
-        arquivo_entrada.close()
-        arquivo_entrada = open(caminho_arquivo, "wt")
-        arquivo_entrada.write(data)
-        arquivo_entrada.close()
+        with open(caminho_arquivo, 'rt') as arquivo_entrada:
+            data = arquivo_entrada.read()
+            data = data.replace(dicionario[chave], valor)
 
-    finally:
-        print(ler_arquivo_conf(caminho_arquivo))
+        with open(caminho_arquivo, 'wt') as arquivo_entrada:
+            arquivo_entrada.write(data)
+
+    except Exception as err:
+        set_log_error("Erro ao editar arquivo conf " + caminho_arquivo)
+        set_log_error(err)
 
 
 def obter_md5_arquivo_crt(path_arquivo):
@@ -286,9 +289,26 @@ def extrair_arquivos(pathNewCert: str, pasta_destino_temp: str):
     return list_arquivos
 
 
-# Cria pasta para o armazenamento de Logs
-criar_pasta("Logs", cwd)
+def configurar_log():
+    # Cria pasta para o armazenamento de Logs
+    criar_pasta("Logs", cwd)
+    logging.basicConfig(filename=log_path, filemode='w', format='%(asctime)s - %(levelname)s - %(message)s',
+                        datefmt='%d-%m-%Y %H:%M:%S', level=logging.INFO)
+
+
+def configurar_log_debug():
+    # Cria pasta para o armazenamento de Logs
+    criar_pasta("Logs", cwd)
+    file_handler = logging.FileHandler(filename=log_path)
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    handlers = [file_handler, stdout_handler]
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s',
+        handlers=handlers
+    )
+
+
 log_path = Path(cwd, "Logs", "log-" + datetime.now().strftime("%d-%m-%Y %H:%M:%S") + ".txt")
-# log_path = os.path.join(cwd, "Logs", "log-" + datetime.now().strftime("%d-%m-%Y %H:%M:%S") + ".txt")
-logging.basicConfig(filename=log_path, filemode='w', format='%(asctime)s - %(levelname)s - %(message)s',
-                    datefmt='%d-%m-%Y %H:%M:%S', level=logging.INFO)
+# Mudar os tipo de log para debug quando necessario
+configurar_log()
