@@ -1,4 +1,5 @@
 import json
+import sys
 
 import typer
 
@@ -55,4 +56,3 @@ def update(common_name: str, path_new_cert: str):
 
 if __name__ == "__main__":
     app()
-
